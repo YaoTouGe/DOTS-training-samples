@@ -76,8 +76,8 @@ public class AntManagerAuthoring : MonoBehaviour
 			    obstacleRadius = antManager.obstacleRadius,
 			    obstaclePrefab = GetEntity(antManager.obstaclePrefab, TransformUsageFlags.Dynamic),
 			    mapSize =  antManager.mapSize,
-			    obstacleMatrices = default,
-			    instancesPerBatch =  instancesPerBatch,
+			    
+			    instancesPerBatch = instancesPerBatch,
 			    bucketResolution = antManager.bucketResolution
 		    });
 	    }
@@ -104,11 +104,10 @@ public struct AntManagerConfig: IComponentData
 	public float obstacleRadius;
 	public Entity obstaclePrefab;
 	public int mapSize;
-	public NativeArray<Matrix4x4> obstacleMatrices;
+	public static NativeArray<Matrix4x4> obstacleMatrices;
 	
-	[sharedsh]
 	public int instancesPerBatch;
 	public int bucketResolution;
-	public NativeArray<CellRange> obstacleBuckets;
-	public NativeArray<ObstacleInfo> obstacles;
+	public static NativeArray<CellRange> obstacleBuckets;
+	public static  NativeArray<ObstacleInfo> obstacles;
 }
