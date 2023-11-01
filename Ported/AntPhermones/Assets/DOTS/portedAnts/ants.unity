@@ -154,31 +154,30 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   basePheromoneMaterial: {fileID: 0}
   pheromoneRenderer: {fileID: 0}
-  antMaterial: {fileID: 0}
-  obstacleMaterial: {fileID: 0}
-  resourceMaterial: {fileID: 0}
-  colonyMaterial: {fileID: 0}
-  antMesh: {fileID: 0}
   obstaclePrefab: {fileID: 6075069705451725842, guid: c43890f9db0e244f9ab4fade9a983a3f,
     type: 3}
-  colonyMesh: {fileID: 0}
-  resourceMesh: {fileID: 0}
+  antPrefab: {fileID: 3687271229561860889, guid: 576e78737de364316bdd5a57f77e7ea9,
+    type: 3}
+  colonyPrefab: {fileID: 6075069705451725842, guid: 195154c5a3c0141b5bda7cce55722a7c,
+    type: 3}
+  resourcePrefab: {fileID: 6075069705451725842, guid: dd525ef1dcdc4415dae6247a31c4cddb,
+    type: 3}
   searchColor: {r: 0, g: 0, b: 0, a: 0}
   carryColor: {r: 0, g: 0, b: 0, a: 0}
-  antCount: 0
+  antCount: 1000
   mapSize: 128
-  bucketResolution: 0
-  antSize: {x: 0, y: 0, z: 0}
-  antSpeed: 0
-  antAccel: 0
-  trailAddSpeed: 0
-  trailDecay: 0
-  randomSteering: 0
-  pheromoneSteerStrength: 0
-  wallSteerStrength: 0
-  goalSteerStrength: 0
-  outwardStrength: 0
-  inwardStrength: 0
+  bucketResolution: 64
+  antSize: {x: 0.008, y: 0.004, z: 0.004}
+  antSpeed: 0.2
+  antAccel: 0.07
+  trailAddSpeed: 0.3
+  trailDecay: 0.9985
+  randomSteering: 0.14
+  pheromoneSteerStrength: 0.015
+  wallSteerStrength: 0.12
+  goalSteerStrength: 0.04
+  outwardStrength: 0.003
+  inwardStrength: 0.003
   rotationResolution: 360
   obstacleRingCount: 3
   obstaclesPerRing: 0.8
