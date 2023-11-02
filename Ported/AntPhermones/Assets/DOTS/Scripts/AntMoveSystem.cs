@@ -15,6 +15,10 @@ partial struct AntMoveSystem : ISystem
 {
 
     AntManagerConfig config;
+    DynamicBuffer<ObstacleData> obstacles;
+    DynamicBuffer<ObstacleBucket> obstacleBuckets;
+    DynamicBuffer<PheromoneData> pheromones;
+
     void OnCreate(ref SystemState state)
     {
         state.RequireForUpdate<AntManagerConfig>();
@@ -29,6 +33,10 @@ partial struct AntMoveSystem : ISystem
     void UpdateAnts(ref SystemState state)
     {
         config = SystemAPI.GetSingleton<AntManagerConfig>();
+        obstacles = SystemAPI.GetSingletonBuffer<ObstacleData>();
+        obstacleBuckets = SystemAPI.GetSingletonBuffer<ObstacleBucket>();
+        pheromones = SystemAPI.GetSingletonBuffer<PheromoneData>();
+
         foreach (var (antInfo, transform) in SystemAPI.Query<RefRW<AntInfo>, RefRW<LocalTransform>>())
         {
             ref AntInfo ant = ref antInfo.ValueRW;
@@ -125,7 +133,7 @@ partial struct AntMoveSystem : ISystem
             CellRange nearbyObstacles = GetObstacleBucket(antTransform.Position);
             for (int j = 0; j < nearbyObstacles.length; j++)
             {
-                ObstacleInfo obstacle = AntManagerConfig.obstacles[j+nearbyObstacles.start];
+                ObstacleInfo obstacle = obstacles[j+nearbyObstacles.start].obstacleInfo;
                 dx = antTransform.Position.x - obstacle.position.x;
                 dy = antTransform.Position.y - obstacle.position.y;
                 float sqrDist = dx * dx + dy * dy;
@@ -183,9 +191,9 @@ partial struct AntMoveSystem : ISystem
             for (int y = 0; y < config.mapSize; y++)
             {
                 int index = PheromoneIndex(x, y);
-                Vector4 oldValue = AntManagerConfig.pheromones[index];
+                Vector4 oldValue = pheromones[index].value;
                 oldValue.x *= config.trailDecay;
-                AntManagerConfig.pheromones[index] =  oldValue;
+                pheromones[index] =  new PheromoneData() {value = oldValue};
             }
         }
 
@@ -214,14 +222,14 @@ partial struct AntMoveSystem : ISystem
         }
 
         int index = PheromoneIndex(x, y);
-        var oldVal = AntManagerConfig.pheromones[index];
+        var oldVal = pheromones[index].value;
         oldVal.x += (config.trailAddSpeed * strength * Time.fixedDeltaTime) * (1f - oldVal.x);
         
         if (oldVal.x > 1f)
         {
             oldVal.x = 1f;
         }
-        AntManagerConfig.pheromones[index] = oldVal;
+        pheromones[index] = new PheromoneData() {value = oldVal};
     }
 
     float PheromoneSteering(ref AntInfo ant, ref LocalTransform transform, float distance)
@@ -241,7 +249,7 @@ partial struct AntMoveSystem : ISystem
             else
             {
                 int index = PheromoneIndex((int)testX, (int)testY);
-                float value = AntManagerConfig.pheromones[index].x;
+                float value = pheromones[index].value.x;
                 output += value * i;
             }
         }
@@ -307,7 +315,7 @@ partial struct AntMoveSystem : ISystem
         }
         else
         {
-            return AntManagerConfig.obstacleBuckets[x*config.bucketResolution + y];
+            return obstacleBuckets[x*config.bucketResolution + y].range;
         }
     }
 }

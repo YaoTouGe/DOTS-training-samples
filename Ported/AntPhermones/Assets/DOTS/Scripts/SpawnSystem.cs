@@ -51,7 +51,7 @@ public partial struct SpawnSystem : ISystem
 				Scale = 4f
 			};
 
-			GenerateObstacles(ref state, ref antmgrConfig);
+			GenerateObstacles(ref state, ref antmgrConfig, entity);
 
 			// Spawning ants
 			GenerateAnts(ref state, ref antmgrConfig);
@@ -70,7 +70,7 @@ public partial struct SpawnSystem : ISystem
 		}
 	}
 
-	void GenerateObstacles(ref SystemState state, ref AntManagerConfig antmgrConfig)
+	void GenerateObstacles(ref SystemState state, ref AntManagerConfig antmgrConfig, Entity configEntity)
 	{
 		var localToWorldLookup = SystemAPI.GetComponentLookup<LocalTransform>();
 		NativeList<ObstacleInfo> output = new NativeList<ObstacleInfo>(Allocator.TempJob);
@@ -153,8 +153,10 @@ public partial struct SpawnSystem : ISystem
 		}
 
 		// A flattern grid of cell, each grid contains a range of obstacle infos
-		AntManagerConfig.obstacles = new NativeArray<ObstacleInfo>(totalSize, Allocator.Persistent);
-		AntManagerConfig.obstacleBuckets = new NativeArray<CellRange>(antmgrConfig.bucketResolution * antmgrConfig.bucketResolution, Allocator.Persistent);
+		DynamicBuffer<ObstacleData> obstacles = SystemAPI.GetBuffer<ObstacleData>(configEntity);
+		obstacles.ResizeUninitialized(totalSize);
+		DynamicBuffer<ObstacleBucket> obstacleBuckets = SystemAPI.GetBuffer<ObstacleBucket>(configEntity);
+		obstacleBuckets.ResizeUninitialized(antmgrConfig.bucketResolution * antmgrConfig.bucketResolution);
 
 		int accIdx = 0;
 		for (int x = 0; x < antmgrConfig.bucketResolution; x++)
@@ -162,7 +164,7 @@ public partial struct SpawnSystem : ISystem
 			for (int y = 0; y < antmgrConfig.bucketResolution; y++)
 			{
 				var bucketObstacles = tempObstacleBuckets[x, y];
-				CellRange range = new CellRange()
+				CellRange curRange = new CellRange()
 				{
 					start = accIdx,
 					length = bucketObstacles.Count
@@ -170,23 +172,20 @@ public partial struct SpawnSystem : ISystem
 
 				for (int obstacleIdx = 0; obstacleIdx < bucketObstacles.Count; obstacleIdx++)
 				{
-					AntManagerConfig.obstacles[accIdx + obstacleIdx] = bucketObstacles[obstacleIdx];
+					obstacles[accIdx + obstacleIdx] = new ObstacleData() { obstacleInfo = bucketObstacles[obstacleIdx] };
 				}
 
-				AntManagerConfig.obstacleBuckets[x * antmgrConfig.bucketResolution + y] = range;
+				obstacleBuckets[x * antmgrConfig.bucketResolution + y] = new ObstacleBucket(){range = curRange};
 				accIdx += bucketObstacles.Count;
 			}
 		}
 
-		AntManagerConfig.pheromones = new NativeArray<Vector4>(antmgrConfig.mapSize * antmgrConfig.mapSize, Allocator.Persistent);
+		DynamicBuffer<PheromoneData> pheromones = SystemAPI.GetBuffer<PheromoneData>(configEntity);
+		pheromones.Resize(antmgrConfig.mapSize * antmgrConfig.mapSize, NativeArrayOptions.ClearMemory);
 	}
 
     void OnDestroy()
     {
-		AntManagerConfig.obstacleMatrices.Dispose();
-		AntManagerConfig.obstacleBuckets.Dispose();
-		AntManagerConfig.obstacles.Dispose();
-		AntManagerConfig.pheromones.Dispose();
 	}
 
     [BurstCompile]

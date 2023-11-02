@@ -4,6 +4,7 @@ using Unity.Burst;
 using UnityEngine;
 using Unity.Entities;
 using Unity.Collections;
+using JetBrains.Annotations;
 
 public class AntManagerAuthoring : MonoBehaviour
 {
@@ -51,15 +52,8 @@ public class AntManagerAuthoring : MonoBehaviour
 
     Color[] pheromones;
     Ant[] ants;
-    Matrix4x4[][] matrices;
     Vector4[][] antColors;
     MaterialPropertyBlock[] matProps;
-    Obstacle[] obstacles;
-    Matrix4x4[][] obstacleMatrices;
-    Obstacle[,][] obstacleBuckets;
-
-    Matrix4x4 resourceMatrix;
-    Matrix4x4 colonyMatrix;
 
     const int instancesPerBatch = 1023;
 
@@ -96,6 +90,10 @@ public class AntManagerAuthoring : MonoBehaviour
                 colonyPrefab = GetEntity(antManager.colonyPrefab, TransformUsageFlags.Dynamic),
                 resourcePrefab = GetEntity(antManager.resourcePrefab, TransformUsageFlags.Dynamic),
             });
+
+            AddBuffer<ObstacleBucket>(entity);
+            AddBuffer<PheromoneData>(entity);
+            AddBuffer<ObstacleData>(entity);
         }
     }
 }
@@ -142,12 +140,29 @@ public struct AntManagerConfig: IComponentData
     public float trailDecay;
     public Vector3 resourcePosition;
     public Vector3 colonyPosition;
-    public static NativeArray<Matrix4x4> obstacleMatrices;
-	
 	public int instancesPerBatch;
 	public int bucketResolution;
-	public static NativeArray<CellRange> obstacleBuckets;
+	/*public static NativeArray<CellRange> obstacleBuckets;
 	public static NativeArray<ObstacleInfo> obstacles;
 
-    public static NativeArray<Vector4> pheromones;
+    public static NativeArray<Vector4> pheromones;*/
+}
+
+// Instead of using NativeArray(which can't be component field and can't be accessed by burst if static)
+[InternalBufferCapacity(0)]
+public struct ObstacleBucket: IBufferElementData
+{
+    public CellRange range;
+}
+
+[InternalBufferCapacity(0)]
+public struct ObstacleData : IBufferElementData
+{
+    public ObstacleInfo obstacleInfo;
+}
+
+[InternalBufferCapacity(0)]
+public struct PheromoneData : IBufferElementData
+{
+    public Vector4 value;
 }

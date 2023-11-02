@@ -7,14 +7,18 @@ Under the 'Originals' directory, you'll find small simulations/games implemented
 
 Feel free to copy assets and code snippets from the originals into your ports. The focus of this exercise is to familiarize yourself with the DOTS API and to practice Data-oriented Design principles!
 
-## DOTS Performance Compare with Original
+## DOTS Performance Compared with Original
 
-When port AntPheromone, the first version is even two times slower than Monobehavior, after deep profiling, much time is spent on NativeArray.GetItem, it performs some bound check and safty check each time I access item.
+When porting AntPheromone, the first version is even two times slower than Monobehavior, after deep profiling, much time is spent on `NativeArray.GetItem`, it performs some safty check when accessed from C#.
 
-||CPU Time||
-|:--------------:|:--:|:--:|
-|Sample| Original(ms)| DOTS(ms)|
-|AntPheromone|1.74|3.42 (disable burst)|
+What's more, it can't be burst compiled since burst doesn't support non-readonly static members (I can't put it in components member field). At last I use DynamicBuffer component and set the `InternalBufferCapacity` to zero to make it out of chunck memory. final it gets about 6 times faster than original.
+
+Another interesting thing is if I disable burst compile for the AntMoveSystem, it becomes slower again. So if code is written the DOTS way(use NativeArray or DynamicBuffer and so on), but without burst compile enabled, the code can be even less performant than MonoBehavior way in editor. I guess it's because without burst compile, there could bring in overhead like safty and atomic check like the first situation. Maybe I should test it on built player with il2cpp later.
+
+|||CPU Time(ms) in Editor|||
+|:-:|:-:|:-:|:-:|:-:|
+|Sample| Original|DOTS no burst| DOTS single thread|DOTS multi-thread|
+|AntPheromone|1.74|*5.7*|0.36||
 
 
 ## Sample Gallery
