@@ -71,29 +71,26 @@ public class AntManagerAuthoring : MonoBehaviour
 	    public override void Bake(AntManagerAuthoring antManager)
 	    {
 		    var entity = GetEntity(TransformUsageFlags.Dynamic);
-            AntManagerConfig.obstacleRingCount = antManager.obstacleRingCount;
-            AntManagerConfig.obstaclesPerRing = antManager.obstaclesPerRing;
-            AntManagerConfig.obstacleRadius = antManager.obstacleRadius;
-            
-            AntManagerConfig.mapSize = antManager.mapSize;
-            AntManagerConfig.antCount = antManager.antCount;
-
-            AntManagerConfig.instancesPerBatch = instancesPerBatch;
-            AntManagerConfig.bucketResolution = antManager.bucketResolution;
-            AntManagerConfig.antSpeed = antManager.antSpeed;
-            AntManagerConfig.randomSteering = antManager.randomSteering;
-
-            AntManagerConfig.inwardStrength = antManager.inwardStrength;
-            AntManagerConfig.pheromoneSteerStrength = antManager.pheromoneSteerStrength;
-            AntManagerConfig.wallSteerStrength = antManager.wallSteerStrength;
-            AntManagerConfig.outwardStrength = antManager.outwardStrength;
-            AntManagerConfig.goalSteerStrength = antManager.goalSteerStrength;
-            AntManagerConfig.antAccel = antManager.antAccel;
-            AntManagerConfig.trailAddSpeed = antManager.trailAddSpeed;
-            AntManagerConfig.trailDecay = antManager.trailDecay;
 
             AddComponent(entity, new AntManagerConfig()
 		    {
+                obstacleRingCount = antManager.obstacleRingCount,
+                obstaclesPerRing = antManager.obstaclesPerRing,
+                obstacleRadius = antManager.obstacleRadius,
+                mapSize = antManager.mapSize,
+                antCount = antManager.antCount,
+                instancesPerBatch = instancesPerBatch,
+                bucketResolution = antManager.bucketResolution,
+                antSpeed = antManager.antSpeed,
+                randomSteering = antManager.randomSteering,
+                inwardStrength = antManager.inwardStrength,
+                pheromoneSteerStrength = antManager.pheromoneSteerStrength,
+                wallSteerStrength = antManager.wallSteerStrength,
+                outwardStrength = antManager.outwardStrength,
+                goalSteerStrength = antManager.goalSteerStrength,
+                antAccel = antManager.antAccel,
+                trailAddSpeed = antManager.trailAddSpeed,
+                trailDecay = antManager.trailDecay,
                 obstaclePrefab = GetEntity(antManager.obstaclePrefab, TransformUsageFlags.Dynamic),
                 antPrefab = GetEntity(antManager.antPrefab, TransformUsageFlags.Dynamic),
                 colonyPrefab = GetEntity(antManager.colonyPrefab, TransformUsageFlags.Dynamic),
@@ -123,34 +120,34 @@ public struct ObstacleInfo
 [BurstCompile]
 public struct AntManagerConfig: IComponentData
 {
-	public static int obstacleRingCount;
-    public static int antCount;
-	public static float obstaclesPerRing;
-	public static float obstacleRadius;
+	public int obstacleRingCount;
+    public int antCount;
+	public float obstaclesPerRing;
+	public float obstacleRadius;
 	public Entity obstaclePrefab;
     public Entity antPrefab;
     public Entity colonyPrefab;
     public Entity resourcePrefab;
 
-    public static int mapSize;
-    public static float antSpeed;
-    public static float randomSteering;
-    public static float pheromoneSteerStrength;
-    public static float wallSteerStrength;
-    public static float goalSteerStrength;
-    public static float outwardStrength;
-    public static float inwardStrength;
-    public static float antAccel;
-    public static float trailAddSpeed;
-    public static float trailDecay;
-    public static Vector3 resourcePosition;
-    public static Vector3 colonyPosition;
+    public int mapSize;
+    public float antSpeed;
+    public float randomSteering;
+    public float pheromoneSteerStrength;
+    public float wallSteerStrength;
+    public float goalSteerStrength;
+    public float outwardStrength;
+    public float inwardStrength;
+    public float antAccel;
+    public float trailAddSpeed;
+    public float trailDecay;
+    public Vector3 resourcePosition;
+    public Vector3 colonyPosition;
     public static NativeArray<Matrix4x4> obstacleMatrices;
 	
-	public static int instancesPerBatch;
-	public static int bucketResolution;
+	public int instancesPerBatch;
+	public int bucketResolution;
 	public static NativeArray<CellRange> obstacleBuckets;
-	public static  NativeArray<ObstacleInfo> obstacles;
+	public static NativeArray<ObstacleInfo> obstacles;
 
     public static NativeArray<Vector4> pheromones;
 }

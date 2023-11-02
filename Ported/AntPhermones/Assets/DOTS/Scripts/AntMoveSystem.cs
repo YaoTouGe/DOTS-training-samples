@@ -4,61 +4,76 @@ using UnityEngine;
 using Unity.Entities;
 using Unity.Transforms;
 using Unity.Mathematics;
+using Unity.Collections;
+using Unity.Burst;
+using Unity.Entities.UniversalDelegates;
+using Unity.Jobs;
 
+[BurstCompile]
+[UpdateAfter(typeof(SpawnSystem))]
 partial struct AntMoveSystem : ISystem
 {
+
+    AntManagerConfig config;
+    void OnCreate(ref SystemState state)
+    {
+        state.RequireForUpdate<AntManagerConfig>();
+    }
+
+    [BurstCompile]
     void OnUpdate(ref SystemState state)
     {
-
+        UpdateAnts(ref state);
     }
 
     void UpdateAnts(ref SystemState state)
     {
-        foreach(var (antInfo, transform) in SystemAPI.Query<RefRW<AntInfo>, RefRW<LocalTransform>>())
+        config = SystemAPI.GetSingleton<AntManagerConfig>();
+        foreach (var (antInfo, transform) in SystemAPI.Query<RefRW<AntInfo>, RefRW<LocalTransform>>())
         {
             ref AntInfo ant = ref antInfo.ValueRW;
-            float targetSpeed = AntManagerConfig.antSpeed;
+            float targetSpeed = config.antSpeed;
             ref LocalTransform antTransform = ref transform.ValueRW;
-            ant.facingAngle += UnityEngine.Random.Range(-AntManagerConfig.randomSteering, AntManagerConfig.randomSteering);
+            ant.facingAngle += UnityEngine.Random.Range(-config.randomSteering, config.randomSteering);
 
             float pheroSteering = PheromoneSteering(ref ant, ref antTransform, 3f);
             int wallSteering = WallSteering(ref ant, ref antTransform, 1.5f);
-            ant.facingAngle += pheroSteering * AntManagerConfig.pheromoneSteerStrength;
-            ant.facingAngle += wallSteering * AntManagerConfig.wallSteerStrength;
+            ant.facingAngle += pheroSteering * config.pheromoneSteerStrength;
+            ant.facingAngle += wallSteering * config.wallSteerStrength;
 
-            targetSpeed *= 1f - (Mathf.Abs(pheroSteering) + Mathf.Abs(wallSteering)) / 3f;
+            targetSpeed *= 1f - (math.abs(pheroSteering) + math.abs(wallSteering)) / 3f;
 
-            ant.speed += (targetSpeed - ant.speed) * AntManagerConfig.antAccel;
+            ant.speed += (targetSpeed - ant.speed) * config.antAccel;
 
             
             float3 targetPos;
             /* TODO: ant colors
-            int index1 = i / AntManagerConfig.instancesPerBatch;
-            int index2 = i % AntManagerConfig.instancesPerBatch;
+            int index1 = i / config.instancesPerBatch;
+            int index2 = i % config.instancesPerBatch;
             if (ant.holdingResource == false)
             {
-                targetPos = AntManagerConfig.resourcePosition;
+                targetPos = config.resourcePosition;
 
                 antColors[index1][index2] += ((Vector4)searchColor * ant.brightness - antColors[index1][index2]) * .05f;
             }
             else
             {
-                targetPos = AntManagerConfig.colonyPosition;
+                targetPos = config.colonyPosition;
                 antColors[index1][index2] += ((Vector4)carryColor * ant.brightness - antColors[index1][index2]) * .05f;
             }*/
 
             if (ant.holdingResource == false)
             {
-                targetPos = AntManagerConfig.resourcePosition;
+                targetPos = config.resourcePosition;
             }
             else
             {
-                targetPos = AntManagerConfig.colonyPosition;
+                targetPos = config.colonyPosition;
             }
             if (Linecast(transform.ValueRO.Position, targetPos) == false)
             {
                 Color color = Color.green;
-                float targetAngle = Mathf.Atan2(targetPos.y - transform.ValueRO.Position.y, targetPos.x - transform.ValueRO.Position.x);
+                float targetAngle = math.atan2(targetPos.y - transform.ValueRO.Position.y, targetPos.x - transform.ValueRO.Position.x);
                 if (targetAngle - ant.facingAngle > Mathf.PI)
                 {
                     ant.facingAngle += Mathf.PI * 2f;
@@ -71,8 +86,8 @@ partial struct AntMoveSystem : ISystem
                 }
                 else
                 {
-                    if (Mathf.Abs(targetAngle - ant.facingAngle) < Mathf.PI * .5f)
-                        ant.facingAngle += (targetAngle - ant.facingAngle) * AntManagerConfig.goalSteerStrength;
+                    if (math.abs(targetAngle - ant.facingAngle) < Mathf.PI * .5f)
+                        ant.facingAngle += (targetAngle - ant.facingAngle) * config.goalSteerStrength;
                 }
 
                 //Debug.DrawLine(ant.position/mapSize,targetPos/mapSize,color);
@@ -83,12 +98,12 @@ partial struct AntMoveSystem : ISystem
                 ant.facingAngle += Mathf.PI;
             }
 
-            float vx = Mathf.Cos(ant.facingAngle) * ant.speed;
-            float vy = Mathf.Sin(ant.facingAngle) * ant.speed;
+            float vx = math.cos(ant.facingAngle) * ant.speed;
+            float vy = math.sin(ant.facingAngle) * ant.speed;
             float ovx = vx;
             float ovy = vy;
 
-            if (transform.ValueRO.Position.x + vx < 0f || transform.ValueRO.Position.x + vx > AntManagerConfig.mapSize)
+            if (transform.ValueRO.Position.x + vx < 0f || transform.ValueRO.Position.x + vx > config.mapSize)
             {
                 vx = -vx;
             }
@@ -96,7 +111,7 @@ partial struct AntMoveSystem : ISystem
             {
                 transform.ValueRW.Position.x += vx;
             }
-            if (transform.ValueRO.Position.y + vy < 0f || transform.ValueRO.Position.y + vy > AntManagerConfig.mapSize)
+            if (transform.ValueRO.Position.y + vy < 0f || transform.ValueRO.Position.y + vy > config.mapSize)
             {
                 vy = -vy;
             }
@@ -114,36 +129,36 @@ partial struct AntMoveSystem : ISystem
                 dx = antTransform.Position.x - obstacle.position.x;
                 dy = antTransform.Position.y - obstacle.position.y;
                 float sqrDist = dx * dx + dy * dy;
-                if (sqrDist < AntManagerConfig.obstacleRadius * AntManagerConfig.obstacleRadius)
+                if (sqrDist < config.obstacleRadius * config.obstacleRadius)
                 {
-                    dist = Mathf.Sqrt(sqrDist);
+                    dist = math.sqrt(sqrDist);
                     dx /= dist;
                     dy /= dist;
-                    antTransform.Position.x = obstacle.position.x + dx * AntManagerConfig.obstacleRadius;
-                    antTransform.Position.y = obstacle.position.y + dy * AntManagerConfig.obstacleRadius;
+                    antTransform.Position.x = obstacle.position.x + dx * config.obstacleRadius;
+                    antTransform.Position.y = obstacle.position.y + dy * config.obstacleRadius;
 
                     vx -= dx * (dx * vx + dy * vy) * 1.5f;
                     vy -= dy * (dx * vx + dy * vy) * 1.5f;
                 }
             }
 
-            float inwardOrOutward = -AntManagerConfig.outwardStrength;
-            float pushRadius = AntManagerConfig.mapSize * .4f;
+            float inwardOrOutward = -config.outwardStrength;
+            float pushRadius = config.mapSize * .4f;
             if (ant.holdingResource)
             {
-                inwardOrOutward = AntManagerConfig.inwardStrength;
-                pushRadius = AntManagerConfig.mapSize;
+                inwardOrOutward = config.inwardStrength;
+                pushRadius = config.mapSize;
             }
-            dx = AntManagerConfig.colonyPosition.x - antTransform.Position.x;
-            dy = AntManagerConfig.colonyPosition.y - antTransform.Position.y;
-            dist = Mathf.Sqrt(dx * dx + dy * dy);
-            inwardOrOutward *= 1f - Mathf.Clamp01(dist / pushRadius);
+            dx = config.colonyPosition.x - antTransform.Position.x;
+            dy = config.colonyPosition.y - antTransform.Position.y;
+            dist = math.sqrt(dx * dx + dy * dy);
+            inwardOrOutward *= 1f - math.clamp(dist / pushRadius, 0, 1);
             vx += dx / dist * inwardOrOutward;
             vy += dy / dist * inwardOrOutward;
 
             if (ovx != vx || ovy != vy)
             {
-                ant.facingAngle = Mathf.Atan2(vy, vx);
+                ant.facingAngle = math.atan2(vy, vx);
             }
 
             //if (ant.holdingResource == false) {
@@ -153,7 +168,7 @@ partial struct AntMoveSystem : ISystem
             {
                 excitement = 1f;
             }
-            excitement *= ant.speed / AntManagerConfig.antSpeed;
+            excitement *= ant.speed / config.antSpeed;
             DropPheromones(antTransform.Position, excitement);
             //}
 
@@ -163,13 +178,13 @@ partial struct AntMoveSystem : ISystem
             matrices[i / instancesPerBatch][i % instancesPerBatch] = matrix;*/
         }
 
-        for (int x = 0; x < AntManagerConfig.mapSize; x++)
+        for (int x = 0; x < config.mapSize; x++)
         {
-            for (int y = 0; y < AntManagerConfig.mapSize; y++)
+            for (int y = 0; y < config.mapSize; y++)
             {
                 int index = PheromoneIndex(x, y);
                 Vector4 oldValue = AntManagerConfig.pheromones[index];
-                oldValue.x *= AntManagerConfig.trailDecay;
+                oldValue.x *= config.trailDecay;
                 AntManagerConfig.pheromones[index] =  oldValue;
             }
         }
@@ -186,21 +201,21 @@ partial struct AntMoveSystem : ISystem
 
     int PheromoneIndex(int x, int y)
     {
-        return x + y * AntManagerConfig.mapSize;
+        return x + y * config.mapSize;
     }
 
     void DropPheromones(float3 position, float strength)
     {
-        int x = Mathf.FloorToInt(position.x);
-        int y = Mathf.FloorToInt(position.y);
-        if (x < 0 || y < 0 || x >= AntManagerConfig.mapSize || y >= AntManagerConfig.mapSize)
+        int x = (int)math.floor(position.x);
+        int y = (int)math.floor(position.y);
+        if (x < 0 || y < 0 || x >= config.mapSize || y >= config.mapSize)
         {
             return;
         }
 
         int index = PheromoneIndex(x, y);
         var oldVal = AntManagerConfig.pheromones[index];
-        oldVal.x += (AntManagerConfig.trailAddSpeed * strength * Time.fixedDeltaTime) * (1f - oldVal.x);
+        oldVal.x += (config.trailAddSpeed * strength * Time.fixedDeltaTime) * (1f - oldVal.x);
         
         if (oldVal.x > 1f)
         {
@@ -215,11 +230,11 @@ partial struct AntMoveSystem : ISystem
 
         for (int i = -1; i <= 1; i += 2)
         {
-            float angle = ant.facingAngle + i * Mathf.PI * .25f;
-            float testX = transform.Position.x + Mathf.Cos(angle) * distance;
-            float testY = transform.Position.y + Mathf.Sin(angle) * distance;
+            float angle = ant.facingAngle + i * math.PI * .25f;
+            float testX = transform.Position.x + math.cos(angle) * distance;
+            float testY = transform.Position.y + math.sin(angle) * distance;
 
-            if (testX < 0 || testY < 0 || testX >= AntManagerConfig.mapSize || testY >= AntManagerConfig.mapSize)
+            if (testX < 0 || testY < 0 || testX >= config.mapSize || testY >= config.mapSize)
             {
 
             }
@@ -230,7 +245,7 @@ partial struct AntMoveSystem : ISystem
                 output += value * i;
             }
         }
-        return Mathf.Sign(output);
+        return math.sign(output);
     }
 
     int WallSteering(ref AntInfo ant, ref LocalTransform transform, float distance)
@@ -239,11 +254,11 @@ partial struct AntMoveSystem : ISystem
 
         for (int i = -1; i <= 1; i += 2)
         {
-            float angle = ant.facingAngle + i * Mathf.PI * .25f;
-            float testX = transform.Position.x + Mathf.Cos(angle) * distance;
-            float testY = transform.Position.y + Mathf.Sin(angle) * distance;
+            float angle = ant.facingAngle + i * math.PI * .25f;
+            float testX = transform.Position.x + math.cos(angle) * distance;
+            float testY = transform.Position.y + math.sin(angle) * distance;
 
-            if (testX < 0 || testY < 0 || testX >= AntManagerConfig.mapSize || testY >= AntManagerConfig.mapSize)
+            if (testX < 0 || testY < 0 || testX >= config.mapSize || testY >= config.mapSize)
             {
 
             }
@@ -263,9 +278,9 @@ partial struct AntMoveSystem : ISystem
     {
         float dx = point2.x - point1.x;
         float dy = point2.y - point1.y;
-        float dist = Mathf.Sqrt(dx * dx + dy * dy);
+        float dist = math.sqrt(dx * dx + dy * dy);
 
-        int stepCount = Mathf.CeilToInt(dist * .5f);
+        int stepCount = (int)math.ceil(dist * .5f);
         for (int i = 0; i < stepCount; i++)
         {
             float t = (float)i / stepCount;
@@ -284,15 +299,24 @@ partial struct AntMoveSystem : ISystem
     }
     CellRange GetObstacleBucket(float posX, float posY)
     {
-        int x = (int)(posX / AntManagerConfig.mapSize * AntManagerConfig.bucketResolution);
-        int y = (int)(posY / AntManagerConfig.mapSize * AntManagerConfig.bucketResolution);
-        if (x < 0 || y < 0 || x >= AntManagerConfig.bucketResolution || y >= AntManagerConfig.bucketResolution)
+        int x = (int)(posX / config.mapSize * config.bucketResolution);
+        int y = (int)(posY / config.mapSize * config.bucketResolution);
+        if (x < 0 || y < 0 || x >= config.bucketResolution || y >= config.bucketResolution)
         {
             return new CellRange(0, 0);
         }
         else
         {
-            return AntManagerConfig.obstacleBuckets[x*AntManagerConfig.bucketResolution + y];
+            return AntManagerConfig.obstacleBuckets[x*config.bucketResolution + y];
         }
+    }
+}
+
+[BurstCompile]
+public partial struct MoveJob: IJobEntity
+{
+    public void Execute()
+    {
+
     }
 }

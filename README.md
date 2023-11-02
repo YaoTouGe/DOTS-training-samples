@@ -7,6 +7,16 @@ Under the 'Originals' directory, you'll find small simulations/games implemented
 
 Feel free to copy assets and code snippets from the originals into your ports. The focus of this exercise is to familiarize yourself with the DOTS API and to practice Data-oriented Design principles!
 
+## DOTS Performance Compare with Original
+
+When port AntPheromone, the first version is even two times slower than Monobehavior, after deep profiling, much time is spent on NativeArray.GetItem, it performs some bound check and safty check each time I access item.
+
+||CPU Time||
+|:--------------:|:--:|:--:|
+|Sample| Original(ms)| DOTS(ms)|
+|AntPheromone|1.74|3.42 (disable burst)|
+
+
 ## Sample Gallery
 
 *Expand the arrows for more details about each sample.*

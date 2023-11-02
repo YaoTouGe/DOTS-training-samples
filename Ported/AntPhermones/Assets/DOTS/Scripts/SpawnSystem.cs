@@ -13,32 +13,41 @@ using Random = UnityEngine.Random;
 [BurstCompile]
 public partial struct SpawnSystem : ISystem
 {
+	bool hasSpawned;
+
+	void OnCreate(ref SystemState state)
+	{
+		hasSpawned = false;
+	}
+
     void OnUpdate(ref SystemState state)
     {
-	    var ecb = new EntityCommandBuffer(Allocator.Temp);
-	    foreach (var (antmgrConfigEntity, entity) in SystemAPI.Query<RefRO<AntManagerConfig>>().WithEntityAccess())
+		if (hasSpawned)
+			return;
+
+	    foreach (var (antmgrConfigEntity, entity) in SystemAPI.Query<RefRW<AntManagerConfig>>().WithEntityAccess())
 	    {
-		    var antmgrConfig = antmgrConfigEntity.ValueRO;
+		    ref var antmgrConfig = ref antmgrConfigEntity.ValueRW;
 
 			// Colony
 			Entity colony = state.EntityManager.Instantiate(antmgrConfig.colonyPrefab);
-			AntManagerConfig.colonyPosition = Vector3.one * AntManagerConfig.mapSize * .5f;
+			antmgrConfig.colonyPosition = Vector3.one * antmgrConfig.mapSize * .5f;
 
 			SystemAPI.GetComponentRW<LocalTransform>(colony).ValueRW = new LocalTransform
 			{
 				Rotation = quaternion.identity,
-				Position = AntManagerConfig.colonyPosition,
+				Position = antmgrConfig.colonyPosition,
 				Scale = 4f
 			};
 
 			// Resource position
 			float resourceAngle = Random.value * 2f * Mathf.PI;
-			AntManagerConfig.resourcePosition = Vector2.one * AntManagerConfig.mapSize * .5f + new Vector2(Mathf.Cos(resourceAngle) * AntManagerConfig.mapSize * .475f, Mathf.Sin(resourceAngle) * AntManagerConfig.mapSize * .475f);
+			antmgrConfig.resourcePosition = Vector2.one * antmgrConfig.mapSize * .5f + new Vector2(Mathf.Cos(resourceAngle) * antmgrConfig.mapSize * .475f, Mathf.Sin(resourceAngle) * antmgrConfig.mapSize * .475f);
 			var resource = state.EntityManager.Instantiate(antmgrConfig.resourcePrefab);
 			SystemAPI.GetComponentRW<LocalTransform>(resource).ValueRW = new LocalTransform
 			{
 				Rotation = quaternion.identity,
-				Position = AntManagerConfig.resourcePosition,
+				Position = antmgrConfig.resourcePosition,
 				Scale = 4f
 			};
 
@@ -47,42 +56,40 @@ public partial struct SpawnSystem : ISystem
 			// Spawning ants
 			GenerateAnts(ref state, ref antmgrConfig);
 
-			// only create the first time, so we destroy it after spawning
-			ecb.DestroyEntity(entity);
+			hasSpawned = true;
 		}
-	    ecb.Playback(state.EntityManager);
     }
 
 	void GenerateAnts(ref SystemState state, ref AntManagerConfig antmgrConfig)
 	{
-		var ants = CollectionHelper.CreateNativeArray<Entity, RewindableAllocator>(AntManagerConfig.antCount, ref state.World.Unmanaged.UpdateAllocator, NativeArrayOptions.UninitializedMemory);
+		var ants = CollectionHelper.CreateNativeArray<Entity, RewindableAllocator>(antmgrConfig.antCount, ref state.World.Unmanaged.UpdateAllocator, NativeArrayOptions.UninitializedMemory);
 		state.EntityManager.Instantiate(antmgrConfig.antPrefab, ants);
 		foreach(var (antInfo, transform) in SystemAPI.Query<RefRO<AntInfo>, RefRW<LocalTransform>>())
 		{
-			transform.ValueRW.Position = new Vector3(Random.Range(-5f, 5f) + AntManagerConfig.mapSize * .5f, Random.Range(-5f, 5f) + AntManagerConfig.mapSize * .5f, 0);
+			transform.ValueRW.Position = new Vector3(Random.Range(-5f, 5f) + antmgrConfig.mapSize * .5f, Random.Range(-5f, 5f) + antmgrConfig.mapSize * .5f, 0);
 		}
 	}
 
 	void GenerateObstacles(ref SystemState state, ref AntManagerConfig antmgrConfig)
 	{
 		var localToWorldLookup = SystemAPI.GetComponentLookup<LocalTransform>();
-		NativeList<ObstacleInfo> output = new NativeList<ObstacleInfo>(Allocator.Temp);
-		for (int i = 1; i <= AntManagerConfig.obstacleRingCount; i++)
+		NativeList<ObstacleInfo> output = new NativeList<ObstacleInfo>(Allocator.TempJob);
+		for (int i = 1; i <= antmgrConfig.obstacleRingCount; i++)
 		{
-			float ringRadius = (i / (AntManagerConfig.obstacleRingCount + 1f)) * (AntManagerConfig.mapSize * .5f);
+			float ringRadius = (i / (antmgrConfig.obstacleRingCount + 1f)) * (antmgrConfig.mapSize * .5f);
 			float circumference = ringRadius * 2f * Mathf.PI;
-			int maxCount = Mathf.CeilToInt(circumference / (2f * AntManagerConfig.obstacleRadius) * 2f);
+			int maxCount = Mathf.CeilToInt(circumference / (2f * antmgrConfig.obstacleRadius) * 2f);
 			int offset = Random.Range(0, maxCount);
 			int holeCount = Random.Range(1, 3);
 			for (int j = 0; j < maxCount; j++)
 			{
 				float t = (float)j / maxCount;
-				if ((t * holeCount) % 1f < AntManagerConfig.obstaclesPerRing)
+				if ((t * holeCount) % 1f < antmgrConfig.obstaclesPerRing)
 				{
 					float angle = (j + offset) / (float)maxCount * (2f * Mathf.PI);
 					ObstacleInfo obstacle = new ObstacleInfo();
-					obstacle.position = new Vector2(AntManagerConfig.mapSize * .5f + Mathf.Cos(angle) * ringRadius, AntManagerConfig.mapSize * .5f + Mathf.Sin(angle) * ringRadius);
-					obstacle.radius = AntManagerConfig.obstacleRadius;
+					obstacle.position = new Vector2(antmgrConfig.mapSize * .5f + Mathf.Cos(angle) * ringRadius, antmgrConfig.mapSize * .5f + Mathf.Sin(angle) * ringRadius);
+					obstacle.radius = antmgrConfig.obstacleRadius;
 					output.Add(obstacle);
 					//Debug.DrawRay(obstacle.position / mapSize,-Vector3.forward * .05f,Color.green,10000f);
 				}
@@ -102,16 +109,16 @@ public partial struct SpawnSystem : ISystem
 		};
 		setPosition.Schedule(output.Length, 64).Complete();
 
-		/*AntManagerConfig.obstacleMatrices = new NativeArray<Matrix4x4>(Mathf.CeilToInt((float)output.Length / AntManagerConfig.instancesPerBatch) * AntManagerConfig.instancesPerBatch, Allocator.Persistent);
-		    for (int i=0;i<AntManagerConfig.obstacleMatrices.Length;i++) {
-			    AntManagerConfig.obstacleMatrices[i] = Matrix4x4.TRS(output[i].position / AntManagerConfig.mapSize,Quaternion.identity,new Vector3(AntManagerConfig.obstacleRadius*2f,AntManagerConfig.obstacleRadius*2f,1f)/AntManagerConfig.mapSize);
+		/*antmgrConfig.obstacleMatrices = new NativeArray<Matrix4x4>(Mathf.CeilToInt((float)output.Length / antmgrConfig.instancesPerBatch) * antmgrConfig.instancesPerBatch, Allocator.Persistent);
+		    for (int i=0;i<antmgrConfig.obstacleMatrices.Length;i++) {
+			    antmgrConfig.obstacleMatrices[i] = Matrix4x4.TRS(output[i].position / antmgrConfig.mapSize,Quaternion.identity,new Vector3(antmgrConfig.obstacleRadius*2f,antmgrConfig.obstacleRadius*2f,1f)/antmgrConfig.mapSize);
 		    }*/
 
-		List<ObstacleInfo>[,] tempObstacleBuckets = new List<ObstacleInfo>[AntManagerConfig.bucketResolution, AntManagerConfig.bucketResolution];
+		List<ObstacleInfo>[,] tempObstacleBuckets = new List<ObstacleInfo>[antmgrConfig.bucketResolution, antmgrConfig.bucketResolution];
 
-		for (int x = 0; x < AntManagerConfig.bucketResolution; x++)
+		for (int x = 0; x < antmgrConfig.bucketResolution; x++)
 		{
-			for (int y = 0; y < AntManagerConfig.bucketResolution; y++)
+			for (int y = 0; y < antmgrConfig.bucketResolution; y++)
 			{
 				tempObstacleBuckets[x, y] = new List<ObstacleInfo>();
 			}
@@ -122,15 +129,15 @@ public partial struct SpawnSystem : ISystem
 		{
 			Vector2 pos = output[i].position;
 			float radius = output[i].radius;
-			for (int x = Mathf.FloorToInt((pos.x - radius) / AntManagerConfig.mapSize * AntManagerConfig.bucketResolution); x <= Mathf.FloorToInt((pos.x + radius) / AntManagerConfig.mapSize * AntManagerConfig.bucketResolution); x++)
+			for (int x = Mathf.FloorToInt((pos.x - radius) / antmgrConfig.mapSize * antmgrConfig.bucketResolution); x <= Mathf.FloorToInt((pos.x + radius) / antmgrConfig.mapSize * antmgrConfig.bucketResolution); x++)
 			{
-				if (x < 0 || x >= AntManagerConfig.bucketResolution)
+				if (x < 0 || x >= antmgrConfig.bucketResolution)
 				{
 					continue;
 				}
-				for (int y = Mathf.FloorToInt((pos.y - radius) / AntManagerConfig.mapSize * AntManagerConfig.bucketResolution); y <= Mathf.FloorToInt((pos.y + radius) / AntManagerConfig.mapSize * AntManagerConfig.bucketResolution); y++)
+				for (int y = Mathf.FloorToInt((pos.y - radius) / antmgrConfig.mapSize * antmgrConfig.bucketResolution); y <= Mathf.FloorToInt((pos.y + radius) / antmgrConfig.mapSize * antmgrConfig.bucketResolution); y++)
 				{
-					if (y < 0 || y >= AntManagerConfig.bucketResolution)
+					if (y < 0 || y >= antmgrConfig.bucketResolution)
 					{
 						continue;
 					}
@@ -147,12 +154,12 @@ public partial struct SpawnSystem : ISystem
 
 		// A flattern grid of cell, each grid contains a range of obstacle infos
 		AntManagerConfig.obstacles = new NativeArray<ObstacleInfo>(totalSize, Allocator.Persistent);
-		AntManagerConfig.obstacleBuckets = new NativeArray<CellRange>(AntManagerConfig.bucketResolution * AntManagerConfig.bucketResolution, Allocator.Persistent);
+		AntManagerConfig.obstacleBuckets = new NativeArray<CellRange>(antmgrConfig.bucketResolution * antmgrConfig.bucketResolution, Allocator.Persistent);
 
 		int accIdx = 0;
-		for (int x = 0; x < AntManagerConfig.bucketResolution; x++)
+		for (int x = 0; x < antmgrConfig.bucketResolution; x++)
 		{
-			for (int y = 0; y < AntManagerConfig.bucketResolution; y++)
+			for (int y = 0; y < antmgrConfig.bucketResolution; y++)
 			{
 				var bucketObstacles = tempObstacleBuckets[x, y];
 				CellRange range = new CellRange()
@@ -166,19 +173,19 @@ public partial struct SpawnSystem : ISystem
 					AntManagerConfig.obstacles[accIdx + obstacleIdx] = bucketObstacles[obstacleIdx];
 				}
 
-				AntManagerConfig.obstacleBuckets[x * AntManagerConfig.bucketResolution + y] = range;
+				AntManagerConfig.obstacleBuckets[x * antmgrConfig.bucketResolution + y] = range;
 				accIdx += bucketObstacles.Count;
 			}
 		}
 
-		AntManagerConfig.pheromones = new NativeArray<Vector4>(AntManagerConfig.mapSize * AntManagerConfig.mapSize, Allocator.Persistent);
+		AntManagerConfig.pheromones = new NativeArray<Vector4>(antmgrConfig.mapSize * antmgrConfig.mapSize, Allocator.Persistent);
 	}
 
     void OnDestroy()
     {
-	    AntManagerConfig.obstacleMatrices.Dispose();
-	    AntManagerConfig.obstacleBuckets.Dispose();
-	    AntManagerConfig.obstacles.Dispose();
+		AntManagerConfig.obstacleMatrices.Dispose();
+		AntManagerConfig.obstacleBuckets.Dispose();
+		AntManagerConfig.obstacles.Dispose();
 		AntManagerConfig.pheromones.Dispose();
 	}
 
