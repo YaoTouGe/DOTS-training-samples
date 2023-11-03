@@ -5,12 +5,14 @@ using UnityEngine;
 using Unity.Entities;
 using Unity.Mathematics;
 using JetBrains.Annotations;
+using UnityEngine.UI;
 
 public class AntManagerAuthoring : MonoBehaviour
 {
+    /*
     public Material basePheromoneMaterial;
     public Renderer pheromoneRenderer;
-    /*public Material antMaterial;
+    public Material antMaterial;
     public Material obstacleMaterial;
     public Material resourceMaterial;
     public Material colonyMaterial;
@@ -89,6 +91,8 @@ public class AntManagerAuthoring : MonoBehaviour
                 antPrefab = GetEntity(antManager.antPrefab, TransformUsageFlags.Dynamic),
                 colonyPrefab = GetEntity(antManager.colonyPrefab, TransformUsageFlags.Dynamic),
                 resourcePrefab = GetEntity(antManager.resourcePrefab, TransformUsageFlags.Dynamic),
+                carryColor = new float4(antManager.carryColor.r, antManager.carryColor.g, antManager.carryColor.b, antManager.carryColor.a),
+                searchColor = new float4(antManager.searchColor.r, antManager.searchColor.g, antManager.searchColor.b, antManager.searchColor.a)
             });
 
             AddBuffer<ObstacleBucket>(entity);
@@ -142,10 +146,8 @@ public struct AntManagerConfig: IComponentData
     public Vector3 colonyPosition;
 	public int instancesPerBatch;
 	public int bucketResolution;
-	/*public static NativeArray<CellRange> obstacleBuckets;
-	public static NativeArray<ObstacleInfo> obstacles;
-
-    public static NativeArray<Vector4> pheromones;*/
+    public float4 searchColor;
+    public float4 carryColor;
 }
 
 // Instead of using NativeArray(which can't be component field and can't be accessed by burst if static)

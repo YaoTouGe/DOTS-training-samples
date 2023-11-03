@@ -69,14 +69,6 @@ partial struct AntMoveSystem : ISystem
         };
         state.Dependency = decayJob.Schedule(config.mapSize * config.mapSize, 64, state.Dependency);
         state.Dependency.Complete();
-        /* TODO: Display pheromoneTexture
-        pheromoneTexture.SetPixels(pheromones);
-        pheromoneTexture.Apply();
-
-        for (int i = 0; i < matProps.Length; i++)
-        {
-            matProps[i].SetVectorArray("_Color", antColors[i]);
-        }*/
     }
 
     [BurstCompile]
@@ -108,7 +100,7 @@ partial struct AntMoveSystem : ISystem
         [NativeDisableContainerSafetyRestriction]
         public NativeArray<Unity.Mathematics.Random> randomGenerators;
         [Unity.Collections.LowLevel.Unsafe.NativeSetThreadIndex] int threadId;
-        public void Execute(ref AntInfo ant, ref LocalTransform antTransform)
+        public void Execute(ref AntInfo ant, ref LocalTransform antTransform, ref AntColor antColor)
         {
             var rand = randomGenerators[threadId];
             float targetSpeed = config.antSpeed;
@@ -125,29 +117,18 @@ partial struct AntMoveSystem : ISystem
 
 
             float3 targetPos;
-            /* TODO: ant colors
-            int index1 = i / config.instancesPerBatch;
-            int index2 = i % config.instancesPerBatch;
             if (ant.holdingResource == false)
             {
                 targetPos = config.resourcePosition;
 
-                antColors[index1][index2] += ((Vector4)searchColor * ant.brightness - antColors[index1][index2]) * .05f;
+                antColor.Value += (config.searchColor * ant.brightness - antColor.Value) * .05f;
             }
             else
             {
                 targetPos = config.colonyPosition;
-                antColors[index1][index2] += ((Vector4)carryColor * ant.brightness - antColors[index1][index2]) * .05f;
-            }*/
+                antColor.Value += (config.carryColor * ant.brightness - antColor.Value) * .05f;
+            }
 
-            if (ant.holdingResource == false)
-            {
-                targetPos = config.resourcePosition;
-            }
-            else
-            {
-                targetPos = config.colonyPosition;
-            }
             if (Linecast(antTransform.Position, targetPos) == false)
             {
                 Color color = Color.green;

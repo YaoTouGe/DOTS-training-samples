@@ -182,7 +182,11 @@ public partial struct SpawnSystem : ISystem
 		}
 
 		DynamicBuffer<PheromoneData> pheromones = SystemAPI.GetBuffer<PheromoneData>(configEntity);
-		pheromones.Resize(antmgrConfig.mapSize * antmgrConfig.mapSize, NativeArrayOptions.ClearMemory);
+		pheromones.Resize(antmgrConfig.mapSize * antmgrConfig.mapSize, NativeArrayOptions.UninitializedMemory);
+		for(int i =0; i < pheromones.Length; ++i)
+		{
+			pheromones[i] = new PheromoneData() {value = new float4(0, 0, 0, 1)};
+		}
 	}
 
     void OnDestroy()
