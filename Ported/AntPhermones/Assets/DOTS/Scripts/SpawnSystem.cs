@@ -31,7 +31,7 @@ public partial struct SpawnSystem : ISystem
 
 			// Colony
 			Entity colony = state.EntityManager.Instantiate(antmgrConfig.colonyPrefab);
-			antmgrConfig.colonyPosition = Vector3.one * antmgrConfig.mapSize * .5f;
+			antmgrConfig.colonyPosition = Vector2.one * antmgrConfig.mapSize * .5f;
 
 			SystemAPI.GetComponentRW<LocalTransform>(colony).ValueRW = new LocalTransform
 			{

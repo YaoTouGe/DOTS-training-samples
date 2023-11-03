@@ -57,7 +57,7 @@ partial struct AntMoveSystem : ISystem
             obstacles = SystemAPI.GetSingletonBuffer<ObstacleData>(),
             obstacleBuckets = SystemAPI.GetSingletonBuffer<ObstacleBucket>(),
             pheromones = SystemAPI.GetSingletonBuffer<PheromoneData>(),
-            deltaTime = Time.fixedDeltaTime,
+            deltaTime = Time.deltaTime,
             randomGenerators = this.randGenerators
         };
         state.Dependency = move.ScheduleParallel(state.Dependency);
