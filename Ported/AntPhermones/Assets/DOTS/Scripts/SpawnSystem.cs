@@ -107,7 +107,8 @@ public partial struct SpawnSystem : ISystem
 			Entities = obstacleEntities,
 			ObstacleInfos = output
 		};
-		setPosition.Schedule(output.Length, 64).Complete();
+		state.Dependency = setPosition.Schedule(output.Length, 64, state.Dependency);
+		state.Dependency.Complete();
 
 		/*antmgrConfig.obstacleMatrices = new NativeArray<Matrix4x4>(Mathf.CeilToInt((float)output.Length / antmgrConfig.instancesPerBatch) * antmgrConfig.instancesPerBatch, Allocator.Persistent);
 		    for (int i=0;i<antmgrConfig.obstacleMatrices.Length;i++) {

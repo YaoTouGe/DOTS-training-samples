@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Unity.Burst;
 using UnityEngine;
 using Unity.Entities;
-using Unity.Collections;
+using Unity.Mathematics;
 using JetBrains.Annotations;
 
 public class AntManagerAuthoring : MonoBehaviour
@@ -164,5 +164,5 @@ public struct ObstacleData : IBufferElementData
 [InternalBufferCapacity(0)]
 public struct PheromoneData : IBufferElementData
 {
-    public Vector4 value;
+    public float4 value;
 }
